@@ -1,0 +1,58 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  role      Role     @default(ADMIN)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("users")
+}
+
+model Course {
+  id            String         @id @default(cuid())
+  title         String
+  description   String
+  imageUrl      String?        @map("image_url")
+  slug          String         @unique
+  createdAt     DateTime       @default(now()) @map("created_at")
+  form          Form?
+  registrations Registration[]
+
+  @@map("courses")
+}
+
+model Form {
+  id         String   @id @default(cuid())
+  courseId   String   @unique @map("course_id")
+  schemaJson Json     @map("schema_json")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  course     Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@map("forms")
+}
+
+model Registration {
+  id        String   @id @default(cuid())
+  courseId  String   @map("course_id")
+  dataJson  Json     @map("data_json")
+  createdAt DateTime @default(now()) @map("created_at")
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@index([courseId])
+  @@index([createdAt])
+  @@map("registrations")
+}
+
+enum Role {
+  ADMIN
+}
