@@ -51,6 +51,7 @@ export function CreateCourseForm() {
               Image Upload
             </span>
             <Input name="imageFile" type="file" accept="image/*" className="rounded-2xl file:mr-3 file:rounded-xl file:border-0 file:bg-indigo-50 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-indigo-700" />
+            <span className="block text-xs text-slate-500">Use images under 2MB for reliable Vercel uploads.</span>
           </label>
         </div>
       </div>

@@ -2,19 +2,18 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { mkdir, writeFile } from "fs/promises";
-import path from "path";
 import { z } from "zod";
 import { clearAdminSession, createAdminSession, requireAdmin, validateAdmin } from "@/lib/auth";
 import { defaultRegistrationSchema, dynamicFormSchema, normalizeField, schemaFromJson } from "@/lib/form-schema";
 import { hasDatabaseUrl, prisma } from "@/lib/prisma";
-import { generateShortSlug, slugify } from "@/lib/utils";
+import { generateShortSlug } from "@/lib/utils";
 
 const courseSchema = z.object({
   title: z.string().min(2),
   description: z.string().min(10),
   imageUrl: z.string().optional()
 });
+const maxUploadBytes = 2 * 1024 * 1024;
 
 export async function submitRegistration(courseId: string, data: Record<string, string>) {
   if (!hasDatabaseUrl) {
@@ -70,13 +69,12 @@ export async function createCourseAction(formData: FormData) {
   let imageUrl = parsed.imageUrl || "/logo.jpg";
 
   if (imageFile instanceof File && imageFile.size > 0) {
+    if (imageFile.size > maxUploadBytes) {
+      redirect("/admin/courses?error=image-too-large");
+    }
     const bytes = Buffer.from(await imageFile.arrayBuffer());
-    const extension = imageFile.name.split(".").pop() || "jpg";
-    const filename = `${slugify(parsed.title)}-${Date.now()}.${extension}`;
-    const uploadDir = path.join(process.cwd(), "public", "uploads");
-    await mkdir(uploadDir, { recursive: true });
-    await writeFile(path.join(uploadDir, filename), bytes);
-    imageUrl = `/uploads/${filename}`;
+    const mimeType = imageFile.type || "image/jpeg";
+    imageUrl = `data:${mimeType};base64,${bytes.toString("base64")}`;
   }
 
   const labels = formData.getAll("label").map(String);

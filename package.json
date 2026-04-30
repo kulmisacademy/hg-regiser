@@ -9,6 +9,7 @@
     "lint": "next lint",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
+    "db:repair-images": "tsx prisma/repair-image-urls.ts",
     "prisma:generate": "prisma generate"
   },
   "dependencies": {
