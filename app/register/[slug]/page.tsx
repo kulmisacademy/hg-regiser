@@ -1,7 +1,7 @@
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import { submitRegistration } from "@/app/actions";
 import { Brand } from "@/components/brand";
+import { CourseImage } from "@/components/course-image";
 import { DynamicRegistrationForm } from "@/components/dynamic-registration-form";
 import { defaultRegistrationSchema, schemaFromJson } from "@/lib/form-schema";
 import { hasDatabaseUrl, prisma } from "@/lib/prisma";
@@ -38,9 +38,7 @@ export default async function RegisterPage({ params }: { params: Promise<{ slug:
           <Brand />
         </div>
         <div className="overflow-hidden rounded-2xl border border-white/70 bg-white/90 shadow-soft backdrop-blur">
-          <div className="relative aspect-[16/10] bg-slate-200">
-            <Image src={activeCourse.imageUrl || "/logo.jpg"} alt={activeCourse.title} fill priority className="object-cover" />
-          </div>
+          <CourseImage src={activeCourse.imageUrl} alt={activeCourse.title} priority className="rounded-none border-b bg-slate-50" />
           <div className="p-5 sm:p-8">
             <div>
               <h1 className="text-center text-3xl font-bold text-slate-950 sm:text-4xl">{activeCourse.title}</h1>

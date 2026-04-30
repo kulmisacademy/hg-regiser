@@ -1,8 +1,8 @@
-import Image from "next/image";
 import Link from "next/link";
 import { Edit3, ExternalLink, Link2, Plus, Rocket } from "lucide-react";
 import { AdminShell } from "@/components/admin-shell";
 import { CopyRegistrationLink } from "@/components/copy-registration-link";
+import { CourseImage } from "@/components/course-image";
 import { CreateCourseForm } from "@/components/create-course-form";
 import { Button } from "@/components/ui/button";
 import { hasDatabaseUrl, prisma } from "@/lib/prisma";
@@ -65,9 +65,7 @@ export default async function CoursesPage({
           <div className="grid gap-4">
             {courses.map((course) => (
               <article key={course.id} className="grid gap-4 rounded-2xl border bg-white p-4 shadow-sm transition hover:shadow-soft md:grid-cols-[150px_1fr]">
-                <div className="relative aspect-[16/10] overflow-hidden rounded-2xl bg-slate-100">
-                  <Image src={course.imageUrl || "/logo.jpg"} alt={course.title} fill className="object-cover" />
-                </div>
+                <CourseImage src={course.imageUrl} alt={course.title} className="bg-slate-50 md:max-w-[170px]" />
                 <div className="min-w-0">
                   <h3 className="text-lg font-semibold text-slate-950">{course.title}</h3>
                   <p className="mt-1 text-sm leading-6 text-slate-600">{course.description}</p>
