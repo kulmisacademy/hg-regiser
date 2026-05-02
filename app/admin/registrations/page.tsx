@@ -1,9 +1,12 @@
 import Link from "next/link";
 import { Download, Search } from "lucide-react";
+import { deleteRegistrationAction } from "@/app/actions";
 import { AdminShell } from "@/components/admin-shell";
+import { DeleteSubmitButton } from "@/components/delete-submit-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { schemaFromJson } from "@/lib/form-schema";
 import { hasDatabaseUrl, prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/utils";
 
@@ -19,10 +22,13 @@ export default async function RegistrationsPage({
     return <AdminShell><div /></AdminShell>;
   }
 
-  const courses = await prisma.course.findMany({ orderBy: { title: "asc" } });
+  const courses = await prisma.course.findMany({
+    orderBy: { title: "asc" },
+    include: { form: true }
+  });
   const registrations = await prisma.registration.findMany({
     orderBy: { createdAt: "desc" },
-    include: { course: true },
+    include: { course: { include: { form: true } } },
     where: {
       courseId: filters.course || undefined,
       createdAt: {
@@ -37,6 +43,26 @@ export default async function RegistrationsPage({
     : registrations;
 
   const query = new URLSearchParams(Object.entries(filters).filter(([, value]) => Boolean(value)) as [string, string][]).toString();
+  const selectedCourse = filters.course ? courses.find((course) => course.id === filters.course) : null;
+  const labelByKey = new Map<string, string>();
+
+  for (const course of courses) {
+    const schema = schemaFromJson(course.form?.schemaJson);
+    for (const field of schema.fields) {
+      labelByKey.set(field.name, field.label);
+    }
+  }
+
+  const dataColumns = selectedCourse
+    ? schemaFromJson(selectedCourse.form?.schemaJson).fields.map((field) => ({ key: field.name, label: field.label }))
+    : Array.from(
+        filtered.reduce((keys, item) => {
+          const data = item.dataJson as Record<string, unknown>;
+          Object.keys(data).forEach((key) => keys.add(key));
+          return keys;
+        }, new Set<string>())
+      ).map((key) => ({ key, label: labelByKey.get(key) ?? key }));
+  const tableColumnCount = dataColumns.length + (selectedCourse ? 2 : 3);
 
   return (
     <AdminShell>
@@ -76,10 +102,12 @@ export default async function RegistrationsPage({
             <table className="w-full min-w-[760px] text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
-                  <th className="px-4 py-3">Name</th>
-                  <th className="px-4 py-3">Phone</th>
-                  <th className="px-4 py-3">District</th>
+                  {!selectedCourse && <th className="px-4 py-3">Course</th>}
+                  {dataColumns.map((column) => (
+                    <th key={column.key} className="px-4 py-3">{column.label}</th>
+                  ))}
                   <th className="px-4 py-3">Date</th>
+                  <th className="px-4 py-3">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -87,16 +115,29 @@ export default async function RegistrationsPage({
                   const data = item.dataJson as Record<string, string>;
                   return (
                     <tr key={item.id} className="hover:bg-slate-50">
-                      <td className="px-4 py-3 font-medium text-slate-900">{data.fullName ?? data.name ?? data["full-name"] ?? "Student"}</td>
-                      <td className="px-4 py-3 text-slate-600">{data.phone ?? data.phoneNumber ?? "-"}</td>
-                      <td className="px-4 py-3 text-slate-600">{data.district ?? "-"}</td>
+                      {!selectedCourse && <td className="px-4 py-3 font-medium text-slate-900">{item.course.title}</td>}
+                      {dataColumns.map((column) => (
+                        <td key={column.key} className="max-w-[260px] px-4 py-3 text-slate-600">
+                          <span className="block truncate" title={String(data[column.key] ?? "")}>
+                            {data[column.key] || "-"}
+                          </span>
+                        </td>
+                      ))}
                       <td className="px-4 py-3 text-slate-500">{formatDate(item.createdAt)}</td>
+                      <td className="px-4 py-3">
+                        <form action={deleteRegistrationAction.bind(null, item.id)}>
+                          <DeleteSubmitButton
+                            label="Delete"
+                            confirmMessage="Delete this registration record?"
+                          />
+                        </form>
+                      </td>
                     </tr>
                   );
                 })}
                 {!filtered.length && (
                   <tr>
-                    <td colSpan={4} className="px-4 py-10 text-center text-sm text-slate-500">
+                    <td colSpan={tableColumnCount} className="px-4 py-10 text-center text-sm text-slate-500">
                       No registrations found.
                     </td>
                   </tr>

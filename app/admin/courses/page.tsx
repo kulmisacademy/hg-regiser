@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { Edit3, ExternalLink, Link2, Plus, Rocket } from "lucide-react";
+import { deleteCourseAction } from "@/app/actions";
 import { AdminShell } from "@/components/admin-shell";
 import { CopyRegistrationLink } from "@/components/copy-registration-link";
 import { CourseImage } from "@/components/course-image";
 import { CreateCourseForm } from "@/components/create-course-form";
+import { DeleteSubmitButton } from "@/components/delete-submit-button";
 import { Button } from "@/components/ui/button";
 import { hasDatabaseUrl, prisma } from "@/lib/prisma";
 
@@ -80,6 +82,12 @@ export default async function CoursesPage({
                     <Button asChild size="sm" className="rounded-2xl">
                       <Link href={`/register/${course.slug}`}><ExternalLink className="h-4 w-4" /> Open</Link>
                     </Button>
+                    <form action={deleteCourseAction.bind(null, course.id)}>
+                      <DeleteSubmitButton
+                        label="Delete"
+                        confirmMessage={`Delete ${course.title}? This will delete its form and all registrations.`}
+                      />
+                    </form>
                   </div>
                 </div>
               </article>

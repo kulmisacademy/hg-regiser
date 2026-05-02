@@ -132,3 +132,28 @@ export async function saveFormBuilderAction(courseId: string, formData: FormData
   revalidatePath(`/admin/forms/${courseId}`);
   redirect(`/admin/forms/${courseId}?saved=1`);
 }
+
+export async function deleteCourseAction(courseId: string) {
+  await requireAdmin();
+  const course = await prisma.course.findUnique({ where: { id: courseId }, select: { slug: true } });
+
+  await prisma.course.delete({
+    where: { id: courseId }
+  });
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/courses");
+  revalidatePath("/admin/registrations");
+  if (course) revalidatePath(`/register/${course.slug}`);
+}
+
+export async function deleteRegistrationAction(registrationId: string) {
+  await requireAdmin();
+
+  await prisma.registration.delete({
+    where: { id: registrationId }
+  });
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/registrations");
+}

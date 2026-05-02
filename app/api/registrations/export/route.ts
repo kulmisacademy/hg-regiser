@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import * as XLSX from "xlsx";
 import { getAdminEmail } from "@/lib/auth";
+import { schemaFromJson } from "@/lib/form-schema";
 import { hasDatabaseUrl, prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +24,7 @@ export async function GET(request: NextRequest) {
 
   const registrations = await prisma.registration.findMany({
     orderBy: { createdAt: "desc" },
-    include: { course: true },
+    include: { course: { include: { form: true } } },
     where: {
       courseId: course,
       createdAt: {
@@ -33,21 +34,40 @@ export async function GET(request: NextRequest) {
     }
   });
 
-  const rows = registrations
+  const filteredRegistrations = registrations
     .filter((item) => {
       if (!district) return true;
       const data = item.dataJson as Record<string, string>;
       return String(data.district ?? "").toLowerCase() === district.toLowerCase();
-    })
-    .map((item) => {
+    });
+  const selectedCourse = course
+    ? await prisma.course.findUnique({ where: { id: course }, include: { form: true } })
+    : null;
+  const labelByKey = new Map<string, string>();
+
+  for (const item of filteredRegistrations) {
+    const schema = schemaFromJson(item.course.form?.schemaJson);
+    for (const field of schema.fields) {
+      labelByKey.set(field.name, field.label);
+    }
+  }
+
+  const columns = selectedCourse
+    ? schemaFromJson(selectedCourse.form?.schemaJson).fields.map((field) => ({ key: field.name, label: field.label }))
+    : Array.from(
+        filteredRegistrations.reduce((keys, item) => {
+          const data = item.dataJson as Record<string, unknown>;
+          Object.keys(data).forEach((key) => keys.add(key));
+          return keys;
+        }, new Set<string>())
+      ).map((key) => ({ key, label: labelByKey.get(key) ?? key }));
+
+  const rows = filteredRegistrations.map((item) => {
       const data = item.dataJson as Record<string, string>;
       return {
-        Name: data.fullName ?? data.name ?? data["full-name"] ?? "",
-        Phone: data.phone ?? data.phoneNumber ?? "",
-        District: data.district ?? "",
-        Course: item.course.title,
-        Date: item.createdAt.toISOString(),
-        Notes: data.notes ?? ""
+        ...(!selectedCourse ? { Course: item.course.title } : {}),
+        ...Object.fromEntries(columns.map((column) => [column.label, data[column.key] ?? ""])),
+        Date: item.createdAt.toISOString()
       };
     });
 
